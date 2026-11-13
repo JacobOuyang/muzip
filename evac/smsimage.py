@@ -4,17 +4,18 @@ import io
 
 from PIL import Image, ImageOps
 
-SIDE = 128
+SIDE = 128  # the sketch and a normal close-up fit in this many pixels (read at call time, so evals can vary it)
 
 
-def fit(img, side=SIDE):
+def fit(img, side=None):
     """Greyscale, shrunk to fit in side x side (aspect kept)."""
+    side = side or SIDE
     g = img.convert("L")
     g.thumbnail((side, side), Image.LANCZOS)
     return g
 
 
-def png(img, side=SIDE):
+def png(img, side=None):
     """The picture as a 1-bit PNG fitting in `side` pixels (black ink on white): outlines and line drawings."""
     s = fit(img, side).point(lambda v: 255 if v > 140 else 0).convert("1")
     buf = io.BytesIO()
@@ -22,12 +23,13 @@ def png(img, side=SIDE):
     return buf.getvalue()
 
 
-def webp(img, side=SIDE, quality=5, colour=False):
+def webp(img, side=None, quality=5, colour=False):
     """The picture as a small greyscale WebP (contrast stretched first): photos and zooms. On the six sample photos
     quality 5 took 284-1386 bytes, about what a 1-bit PNG takes, but a busy or dark photo stays readable where the
     1-bit one turns to noise (the bicycle against a brick wall) or vanishes (a white sneaker). Browsers decode it.
     colour=True keeps colour, for a close-up where colour decides the answer (a red mark on a spider): at quality 5
     colour smears into blocks, so it gets quality 30."""
+    side = side or SIDE
     buf = io.BytesIO()
     if colour:
         small = img.convert("RGB")

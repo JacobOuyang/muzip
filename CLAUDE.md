@@ -93,6 +93,23 @@ WhatsApp on a Mac: `sim/wa_phone.py` fills WhatsApp Desktop via `whatsapp://send
 (`sim/make_muzip_app.sh`) presses Return when `wa_phone.press_return` drops a `press` file in `/tmp/muzip-<uid>/` (it
 holds the Accessibility grant and never touches ~/Documents: macOS's per-app Documents check stalled an earlier app).
 
+**SMS (`evac/sms.py`).** Texts to the MuZip number reach `POST /sms` on the same bridge. It buffers each sender's
+texts until every code in them is complete (then one `router.handle`), asks `RESEND` after `WAIT` (90 s), prefixes
+replies "MuZip: " and adds the STOP line to a question's first reply (what the number's A2P registration says; the
+terms/privacy pages are `docs/terms/`, `docs/privacy/`). `.env`: `SMS_FROM`. Twilio won't deliver replies from an
+unregistered US 10DLC number (error 30034), and trial accounts can't register.
+
+**The Mac app (`app/MuZip`, Swift package; `app/MuZip/make_app.sh` builds `build/MuZip.app` with Command Line Tools,
+no Xcode).** `MuZipCore` ports the phone's side (codes, sketch, `crop_zoom` arithmetic, WebP via libwebp-Xcode, one
+question's loop in `Inquiry`) and is meant to be shared with an iPhone app; `tests/test_swift_core.py` checks it against
+Python through `muzip-cli` (`swift build --product muzip-cli` first; `muzip-cli ask` runs the loop against the
+simulator). Channels: SMS (Messages AppleScript + `~/Library/Messages/chat.db`), WhatsApp (`whatsapp://send` + Return;
+replies from `sim/server.py`'s `/api/phone/replies`), Simulated (`/api/phone/ask`). A ZOOM change now also touches
+`Codes.swift` and `Picture.swift`.
+
+**Benchmarks (`evals/bench/`):** `fetch.py`, `run.py`, `sweep.py`, `steps.py`, `RESULTS.md`; loop sizes are
+parameters (`smsimage.SIDE`, `codes.HIGH`, `closer.MAX_VIEWS`, `closer.BUDGET`), unchanged at the defaults.
+
 **The store (`evac/store.py`).** Every record in `cache/store/store.db` (SQLite, originals in `cache/store/files/`):
 `id` (base-36 from "100"), `kind` (`inquiry`, `zoom`, `photo`, `wa_msg`, `wa_media`, …), `version`, `parent` + `box`,
 `who`, `where`, `meta` (JSON, merged on update), `file`, `sent` (code parts, for RESEND). `new/get/update/image/find`;
