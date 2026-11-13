@@ -107,6 +107,12 @@ simulator). Channels: SMS (Messages AppleScript + `~/Library/Messages/chat.db`),
 replies from `sim/server.py`'s `/api/phone/replies`), Simulated (`/api/phone/ask`). A ZOOM change now also touches
 `Codes.swift` and `Picture.swift`.
 
+**The iPhone app (`app/MuZipPhone.swiftpm`):** an AppleProductTypes app package on `../MuZip`'s `MuZipCore`; camera +
+PhotosPicker; SMS through a "MuZip Send" shortcut (texts split at `~~~`) and a Message automation opening
+`muzip://reply?text=`; WhatsApp and Simulated go through `sim/server.py` on the Mac (`SIM_HOST=0.0.0.0`). Xcode's
+license isn't accepted on this Mac, so check iOS code with Xcode's toolchain swiftc directly (`-typecheck -target
+arm64-apple-ios17.0 -sdk …/iPhoneOS.sdk`, MuZipCore emitted as a module first, libwebp through a modulemap).
+
 **Benchmarks (`evals/bench/`):** `fetch.py`, `run.py`, `sweep.py`, `steps.py`, `RESULTS.md`; loop sizes are
 parameters (`smsimage.SIDE`, `codes.HIGH`, `closer.MAX_VIEWS`, `closer.BUDGET`), unchanged at the defaults.
 

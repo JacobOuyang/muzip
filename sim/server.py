@@ -125,4 +125,4 @@ def phone_replies(to, after):
 if __name__ == "__main__":
     llm._load_dotenv()
     print("simulator on http://127.0.0.1:%d (model %s)" % (PORT, "on" if llm.available() else "off: set LLAMA_API_KEY in .env"), flush=True)
-    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    ThreadingHTTPServer((os.environ.get("SIM_HOST", "127.0.0.1"), PORT), Handler).serve_forever()

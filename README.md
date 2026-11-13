@@ -207,6 +207,19 @@ message comes in" → `PUBLIC_URL` + `/sms`, and `SMS_FROM` (the number) in `.en
 for A2P 10DLC before Twilio delivers its replies (the terms and privacy pages it needs are in `docs/terms/` and
 `docs/privacy/`).
 
+### 6. MuZip on iPhone
+
+`app/MuZipPhone.swiftpm` is the iPhone app: take a photo with the camera (or pick one), ask, and it runs the same loop
+with the same Swift core as the Mac app. Open the folder in Xcode, choose your iPhone and press Run (the first time:
+`sudo xcodebuild -license` once, your Apple ID under Xcode → Settings → Accounts, Developer Mode on the iPhone).
+
+iOS lets no app send or read texts by itself, so **SMS** goes through two Shortcuts you make once (the app's Settings
+spell them out): "MuZip Send" splits what MuZip hands it at `~~~` lines and sends each text to the MuZip number, and a
+Message automation (sender: the MuZip number, run immediately) opens `muzip://reply?text=` with the text, which
+MuZip answers with the next close-ups. **WhatsApp** opens WhatsApp with the message filled in (you tap send) and reads
+replies from the Mac; **Simulated** sends straight to the simulator on your Mac, started with
+`SIM_HOST=0.0.0.0 .venv/bin/python sim/server.py` and reached at `http://<your Mac's name>.local:8765`.
+
 ### If something doesn't work
 
 - **No reply on WhatsApp:** look at the bridge's terminal. Nothing there means Twilio isn't reaching it: check the
@@ -244,7 +257,7 @@ The three-way comparison behind `/compare` (slow; it asks every question five ti
 | Router and store | `evac/router.py` (codes first, then the loop, else a plain answer), `evac/store.py` (every photo, close-up and message, in SQLite) |
 | WhatsApp | `evac/whatsapp.py`, `sim/whatsapp_server.py`, `sim/muzip.py`, `sim/make_muzip_app.sh`, `sim/wa_phone.py` |
 | SMS | `evac/sms.py` (texts to the MuZip number, on the same bridge at `/sms`) |
-| The Mac app | `app/MuZip/` (Swift: `MuZipCore` is the codes, the sketch and close-ups, and one question's loop, shared with the iPhone app to come; `MuZip` is the app; `muzip-cli` checks the core against Python) |
+| The apps | `app/MuZip/` (Swift: `MuZipCore` is the codes, the sketch and close-ups, and one question's loop; `MuZip` is the Mac app; `muzip-cli` checks the core against Python), `app/MuZipPhone.swiftpm` (the iPhone app, on the same core) |
 | Simulator | `sim/server.py`, `sim/closer.html`, `sim/compare.html`, `sim/closer_demo.py`, `sim/phones.py` |
 | Evals | `evals/bench/` (V* Bench, HR-Bench 4K, TextVQA: accuracy against bytes), `evals/kit/three_ways.py` (three ways), `evals/loop/` (the loop's eval), `evals/kit/webp_vs_normal.py` (sizes), `evals/closer/` (SAM on small pictures) |
 

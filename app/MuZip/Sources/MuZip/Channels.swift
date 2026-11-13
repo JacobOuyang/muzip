@@ -54,9 +54,7 @@ final class WhatsAppChannel: Channel {
     init(number: String, server: URL) { self.number = number.filter(\.isNumber); self.server = server }
 
     func send(_ text: String) async throws {
-        var c = URLComponents(string: "whatsapp://send")!
-        c.queryItems = [URLQueryItem(name: "phone", value: number), URLQueryItem(name: "text", value: text)]
-        guard let url = c.url, NSWorkspace.shared.open(url) else { throw ChannelError("Couldn't open WhatsApp Desktop.") }
+        guard let url = URL(string: "whatsapp://send?" + strictQuery([("phone", number), ("text", text)])), NSWorkspace.shared.open(url) else { throw ChannelError("Couldn't open WhatsApp Desktop.") }
         // WhatsApp fills in the message; macOS only sends a key press to the front app, so bring it forward for a moment.
         try await Task.sleep(nanoseconds: 1_500_000_000)
         let previous = NSWorkspace.shared.frontmostApplication
@@ -167,4 +165,11 @@ func runAppleScript(_ source: String) throws {
     var err: NSDictionary?
     NSAppleScript(source: source)?.executeAndReturnError(&err)
     if let err { throw ChannelError((err[NSAppleScript.errorMessage] as? String) ?? "AppleScript failed") }
+}
+
+/// A query string with every character outside A-Z a-z 0-9 - . _ ~ percent-encoded: URLComponents leaves "+" as it is,
+/// and Shortcuts and WhatsApp read a bare "+" as a space, which breaks the codes' base64.
+func strictQuery(_ items: [(String, String)]) -> String {
+    let ok = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+    return items.map { "\($0.0)=\($0.1.addingPercentEncoding(withAllowedCharacters: ok)!)" }.joined(separator: "&")
 }
