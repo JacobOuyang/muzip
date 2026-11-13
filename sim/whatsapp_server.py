@@ -2,7 +2,8 @@
 
     .venv/bin/python sim/whatsapp_server.py          # http://127.0.0.1:8770 (.claude/launch.json: "whatsapp")
 
-POST /whatsapp            Twilio's webhook for incoming messages (checked against X-Twilio-Signature)
+POST /whatsapp            Twilio's webhook for incoming WhatsApp messages (checked against X-Twilio-Signature)
+POST /sms                 the same for texts to the MuZip number (evac/sms.py)
 GET  /                    "ok", to check the tunnel reaches it
 
 Everything else (the simulator, the store) stays on 127.0.0.1:8765. See evac/whatsapp.py for what the
@@ -14,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from evac import whatsapp  # noqa: E402
+from evac import sms, whatsapp  # noqa: E402
 
 PORT = int(os.environ.get("WHATSAPP_PORT", 8770))
 EMPTY = b'<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
@@ -34,14 +35,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send(b"not found", "text/plain", 404)
 
     def do_POST(self):
-        if self.path != "/whatsapp":
+        if self.path not in ("/whatsapp", "/sms"):
             return self.send(b"not found", "text/plain", 404)
         raw = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode()
         params = {k: v[0] for k, v in parse_qs(raw, keep_blank_values=True).items()}
-        url = os.environ.get("PUBLIC_URL", "").rstrip("/") + "/whatsapp"  # the address Twilio signed
+        url = os.environ.get("PUBLIC_URL", "").rstrip("/") + self.path  # the address Twilio signed
         if not whatsapp.signature_ok(url, params, self.headers.get("X-Twilio-Signature")):
             return self.send(b"bad signature", "text/plain", 403)
-        whatsapp.incoming(params)
+        (sms if self.path == "/sms" else whatsapp).incoming(params)
         self.send(EMPTY, "text/xml")
 
     def log_message(self, fmt, *args):  # one line per request, without the query (phone numbers stay out of logs)
