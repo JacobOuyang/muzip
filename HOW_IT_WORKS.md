@@ -305,6 +305,60 @@ earlier version). A real exchange from a WhatsApp account took about 34 s for a 
 
 To set it up (Twilio, the bridge, a tunnel, MuZip and the test phone), see [README.md](README.md#3-over-whatsapp-from-your-phone).
 
+## Over SMS
+
+`evac/sms.py` takes texts to the MuZip number (Twilio posts them to `/sms` on the bridge, signed like WhatsApp's). A
+phone sends a photo's code parts in a few texts, so the bridge keeps each sender's texts until every code in them is
+complete, then gives them to the router as one message; if parts are still missing 90 s after the last text it replies
+`RESEND <id> <parts>` and MuZip sends them again. Replies start "MuZip: ", and the first reply to a question carries
+"Reply STOP to opt out." before its ZOOM lines, as the number's registration describes. From the offline tests
+(`tests/test_sms.py`, the router scripted):
+
+```
+in    Is this ibuprofen?  #Pab.1/4:…#  #Pab.2/4:…#          (waits: parts 3 and 4 missing)
+in    #Pab.3/4:…#  #Pab.4/4:…#                              (complete: one message to the router)
+out   MuZip: Not sure yet: I need a closer look at the label. Reply STOP to opt out.
+      ZOOM ab 10 20 30 40 C
+```
+
+## The Mac app
+
+`app/MuZip` is a Swift package. `MuZipCore` is the phone's side in Swift: the codes (`Codes.swift`, the same format and
+ZOOM line as `evac/codes.py` and `kit.js`), the sketch and close-ups (`Picture.swift`: grey as Pillow's "L", Lanczos
+shrinking with Accelerate, Pillow's autocontrast, WebP through libwebp; the crop arithmetic of `codes.crop_zoom`) and
+one question's loop (`Inquiry.swift`). `tests/test_swift_core.py` checks it against Python with `muzip-cli`: the
+sketch and close-ups decode with `evac/codes.py`, the crop boxes match to 1/32 px and the sizes match; sketches are
+within 2% of Python's bytes (extinguisher 1,098 against 1,090 B). `muzip-cli ask` runs the whole loop against the
+simulator; a real run on the extinguisher photo:
+
+```
+You    Is the fire extinguisher in this corridor ready to use?  [sketch 1098 B, 12 texts]
+Muse   Not sure yet: I need a closer look at the fire extinguisher on the right wall to see the gauge pin and hose condition, in colour.
+You    1 close-up(s) 64x128 C 966 B [10 texts]
+Muse   Not sure yet: I need closer looks at the pressure gauge on top to see where the needle points, in colour; and the handle and pin area to see if the pin and seal are in place.
+You    2 close-up(s) 71x128 C 676 B, 128x114 756 B [15 texts]
+Muse   Not sure yet: I need a closer look at the pressure gauge to see where the needle points, in colour, in high detail.
+You    1 close-up(s) 48x48 C H 272 B [3 texts]
+Muse   I can't tell from what I can see. (not sure)
+40 texts, 3768 bytes sent, photo 476208 bytes
+```
+
+The app (`MuZip`) shows the photo with every close-up boxed, the pictures Muse got, the texts sent and the
+conversation; close-ups go automatically. Its channels: SMS sends through Messages by AppleScript (a few code parts a
+text) and reads replies from Messages' database; WhatsApp opens `whatsapp://send` and presses Return, and reads replies
+from the bridge's log through `sim/server.py` (`/api/phone/replies`); Simulated posts to `/api/phone/ask`, which calls
+the router directly.
+
+## Benchmarks
+
+`evals/bench/` measures MuZip on public sets, split by a hash into dev (tuned on) and test (not run yet): V\* Bench
+(small things in ~2,250 px photos), HR-Bench 4K and TextVQA. `sweep.py` runs MuZip at several sizes of close-up and
+budgets against WebP at fixed sizes and the photo sent whole; `evals/bench/RESULTS.md` has the V\* tables, the
+published methods' scores (none count bytes) and what to change next. On V\* dev: the photo sent whole 92%; MuZip as it
+ships 42% at a median 9 KB; with 256 px close-ups 64% at 17 KB, and 72% at 22 KB with up to 16; WebP 51% at 29 KB and
+69% at 57 KB. When a close-up showed the target 16 px across or more, MuZip was right 80-95% of the time: the misses
+are searches that didn't find it.
+
 ## The side-by-side on the web
 
 `demo/static/build.py` copies `/compare` into `docs/compare/` with the saved runs (the comparison's results, every
@@ -382,8 +436,9 @@ Voice-overs and finished videos stay in `private/`, which git ignores.
 ## Tests on GitHub
 
 `.github/workflows/tests.yml` runs `python -m unittest discover tests` on Python 3.12 for every push and pull request.
-The 40 tests are offline (codes, the store, the loop with scripted Muse replies, the WhatsApp bridge with no Twilio
-credentials), so no secret is set. Run in a fresh copy of the repo with no `.env`: `Ran 40 tests in 3.422s`, `OK`.
+The 47 tests are offline (codes, the store, the loop with scripted Muse replies, the WhatsApp and SMS bridges with no
+Twilio credentials, and the Swift core against Python, skipped where `muzip-cli` isn't built), so no secret is set.
+Locally: `Ran 47 tests in 4.221s`, `OK`.
 
 ## What's next, and what each step needs
 
