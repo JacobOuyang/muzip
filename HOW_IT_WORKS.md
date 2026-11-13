@@ -349,6 +349,18 @@ text) and reads replies from Messages' database; WhatsApp opens `whatsapp://send
 from the bridge's log through `sim/server.py` (`/api/phone/replies`); Simulated posts to `/api/phone/ask`, which calls
 the router directly.
 
+## The iPhone app
+
+`app/MuZipPhone.swiftpm` is a Swift app package (Xcode opens it as a project) that depends on `../MuZip` for
+`MuZipCore`, so the codes, the sketch, the crop arithmetic and the loop are the Mac app's, line for line. The camera
+(`UIImagePickerController`) or the photo library gives a photo; `Photo(data:)` turns it upright at full size. iOS
+lets no app send or read texts, so SMS runs through Shortcuts: MuZip opens
+`shortcuts://x-callback-url/run-shortcut?name=MuZip%20Send&input=text&text=…`, the texts separated by `~~~` lines for
+the shortcut's Split Text, and a Message automation sends each text from the MuZip number back as
+`muzip://reply?text=…` (the app's URL scheme, in `Info.plist`). Links are percent-encoded strictly: URLComponents leaves
+`+` alone and Shortcuts and WhatsApp read it as a space, which breaks base64. It type-checks against the iOS 27.2 SDK
+(the core and the app, with Xcode's own swiftc); it hasn't been run on a phone yet.
+
 ## Benchmarks
 
 `evals/bench/` measures MuZip on public sets, split by a hash into dev (tuned on) and test (not run yet): V\* Bench
