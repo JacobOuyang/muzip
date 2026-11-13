@@ -29,7 +29,7 @@ import time
 
 from PIL import Image
 
-from . import codes, llm, sam, store
+from . import codes, llm, sam, smsimage, store
 
 MAX_VIEWS = 8   # closer looks Muse may ask for before it must answer (finding one bottle among 30 took 5),
 BUDGET = 160    # or texts the phone may send in all (the photo and every closer look; reading a timetable takes high detail)
@@ -61,9 +61,9 @@ tight: the detail and a little margin (a box much bigger than the detail costs t
 ask for a closer look inside an image that already shows its part at full resolution. To identify a few separate
 small symbols (two or three warning lights or icons), look at each one by itself: a tight box around just that one
 symbol, nothing else in it, and ask for all of them in the same reply (need as a list, one request each), so they
-come back together. Closer looks come back at up to 128 pixels (a small thing at the photo's full
+come back together. Closer looks come back at up to {side} pixels (a small thing at the photo's full
 resolution, as many pixels as it has there); to read small text or tell many small things apart (a timetable, price tags, a shelf of labels), ask for high
-detail: 256 pixels, about 3 to 4 times the texts. Each image says how much closer it is than the whole photo: asking
+detail: {high} pixels, about 3 to 4 times the texts. Each image says how much closer it is than the whole photo: asking
 again for about the same part at the same detail shows nothing new, so draw a smaller box or ask for high detail.
 {budget}
 
@@ -98,7 +98,7 @@ def _views(inq):
                  "%s, %s (%d pixels, about %d times closer than image 1), sent back by their phone (%d texts)." % (
                      i, 100 * x / w, 100 * (x + bw) / w, 100 * y / h, 100 * (y + bh) / h, "in colour" if v["colour"] else "in grey",
                      "in high detail" if v.get("high") else "in normal detail", px,
-                     max(1, round(max(w / bw, h / bh) * px / 128)), v.get("texts", 0)))
+                     max(1, round(max(w / bw, h / bh) * px / smsimage.SIDE)), v.get("texts", 0)))
         if v.get("known"):
             label += " Their phone sent it for an earlier question about this photo; you have it at no cost."
         if v.get("full"):
@@ -118,14 +118,16 @@ def _decide(inq):
     rec = store.get(inq)
     used = texts_used(rec)
     asked = [v for v in rec["meta"].get("views", []) if not v.get("known")]  # close-ups kept from earlier questions are free
-    left = min(MAX_VIEWS - len(asked), (BUDGET - used) // 5)  # a grey closer look is about 5 texts
+    look = max(1, round(5 * (smsimage.SIDE / 128) ** 2))  # a grey closer look is about 5 texts at 128 px
+    left = min(MAX_VIEWS - len(asked), (BUDGET - used) // look)
     if rec["meta"].get("share"):  # a photo shared with no question: one close-up of what matters, then a sentence
         left = min(left, 1 - len(asked))
     views = _views(inq)
-    budget = ("So far their phone has sent %d texts; you can ask for up to %d more closer look%s (about 5 texts each in grey, "
-              "15 in colour, 3 to 4 times that in high detail; %d texts left in all)." % (used, left, "" if left == 1 else "s", BUDGET - used) if left > 0 else
+    budget = ("So far their phone has sent %d texts; you can ask for up to %d more closer look%s (about %d texts each in grey, "
+              "%d in colour, 3 to 4 times that in high detail; %d texts left in all)." % (used, left, "" if left == 1 else "s", look, 3 * look, BUDGET - used) if left > 0 else
               "You can't ask for more: answer now with what you have, and say how sure you are.")
-    content = [{"type": "text", "text": ASK.format(views=" ".join(v[0] for v in views), question=rec["meta"]["question"], budget=budget)}]
+    content = [{"type": "text", "text": ASK.format(views=" ".join(v[0] for v in views), question=rec["meta"]["question"], budget=budget,
+                                                   side=smsimage.SIDE, high=codes.HIGH)}]
     content += [llm.image_part(png) for _, png in views]
     for attempt in range(3):
         try:
