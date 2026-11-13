@@ -188,6 +188,25 @@ the bridge instead of through WhatsApp Desktop (the replies still reach your Wha
 
 ![MuZip on a Mac](docs/screenshots/muzip.png)
 
+### 5. MuZip, the Mac app
+
+A native app (SwiftUI, `app/MuZip`) that does the phone's side itself: drop a photo, ask, and it sends the sketch and
+every close-up Muse asks for, showing where each one came from, what Muse saw and how many texts it took. **Send by**
+picks the channel: **SMS** (real texts from your number through Messages, to the MuZip number), **WhatsApp** (from
+WhatsApp Desktop to the sandbox, as in step 4) or **Simulated** (straight to the router on this Mac, no texts). It
+needs Xcode's command line tools (Swift 6), not Xcode itself.
+
+```bash
+app/MuZip/make_app.sh && open app/MuZip/build/MuZip.app
+```
+
+Simulated needs only the simulator (`sim/server.py`) running. WhatsApp also needs step 3, and MuZip allowed to control
+WhatsApp and under **Accessibility** (to press Return). SMS needs Text Message Forwarding on your iPhone, Full Disk
+Access for MuZip (to read the replies in Messages), and the bridge on Twilio's number: in the number's settings, "A
+message comes in" → `PUBLIC_URL` + `/sms`, and `SMS_FROM` (the number) in `.env`. A US number has to be registered
+for A2P 10DLC before Twilio delivers its replies (the terms and privacy pages it needs are in `docs/terms/` and
+`docs/privacy/`).
+
 ### If something doesn't work
 
 - **No reply on WhatsApp:** look at the bridge's terminal. Nothing there means Twilio isn't reaching it: check the
@@ -224,8 +243,10 @@ The three-way comparison behind `/compare` (slow; it asks every question five ti
 | Codes | `evac/codes.py` (photos and close-ups as text: `P`, `Z`, `ZOOM … C H`, `RESEND`), `evac/smsimage.py` (the sketch) |
 | Router and store | `evac/router.py` (codes first, then the loop, else a plain answer), `evac/store.py` (every photo, close-up and message, in SQLite) |
 | WhatsApp | `evac/whatsapp.py`, `sim/whatsapp_server.py`, `sim/muzip.py`, `sim/make_muzip_app.sh`, `sim/wa_phone.py` |
+| SMS | `evac/sms.py` (texts to the MuZip number, on the same bridge at `/sms`) |
+| The Mac app | `app/MuZip/` (Swift: `MuZipCore` is the codes, the sketch and close-ups, and one question's loop, shared with the iPhone app to come; `MuZip` is the app; `muzip-cli` checks the core against Python) |
 | Simulator | `sim/server.py`, `sim/closer.html`, `sim/compare.html`, `sim/closer_demo.py`, `sim/phones.py` |
-| Evals | `evals/kit/three_ways.py` (three ways), `evals/loop/` (the loop's eval), `evals/kit/webp_vs_normal.py` (sizes), `evals/closer/` (SAM on small pictures) |
+| Evals | `evals/bench/` (V* Bench, HR-Bench 4K, TextVQA: accuracy against bytes), `evals/kit/three_ways.py` (three ways), `evals/loop/` (the loop's eval), `evals/kit/webp_vs_normal.py` (sizes), `evals/closer/` (SAM on small pictures) |
 
 [HOW_IT_WORKS.md](HOW_IT_WORKS.md) has the details with real runs.
 
@@ -240,13 +261,16 @@ directions, weather radar, photo drawings, an offline kit page and a neighbourho
 ## Limits
 
 - **Dense small text in big photos** is the weak spot: on a timetable or a price tag across an aisle, MuZip runs out of texts before it can read it.
-- **WhatsApp through Twilio's sandbox** is the live channel; plain SMS works the same way but wasn't set up.
+- **WhatsApp through Twilio's sandbox** is the live channel. SMS is built (the bridge and the Mac app) but Twilio only
+  delivers replies from a US number once it is registered for A2P 10DLC.
 - **Muse aims the first close-up from context alone,** because SAM can't find small things in the sketch.
 - **The test set is small:** nine questions in the comparison, twelve in the loop's eval, half on generated photos.
 
 ## What's next
 
-1. **Measure it on public benchmarks.** Accuracy against bytes, beside JPEG, WebP and the full photo:
+1. **Measure it on public benchmarks.** Started: on V\* Bench (dev half) MuZip was right 42% of the time at a median
+   9 KB as it ships and 72% at 22 KB with 256 px close-ups, against 51% for WebP at 29 KB and 92% for the photo sent
+   whole (`evals/bench/RESULTS.md`). Next, VizWiz and the test halves. Accuracy against bytes, beside JPEG, WebP and the full photo:
    [VizWiz](https://vizwiz.org/) (phone photos taken by blind and low-vision people, with the questions they asked),
    [V\* Bench](https://github.com/penghao-wu/vstar) and HR-Bench (one small detail in a high-resolution photo),
    TextVQA (signs and labels). A curve instead of picked examples.

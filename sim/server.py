@@ -21,7 +21,7 @@ from urllib.parse import unquote
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(ROOT, ".."))
 sys.path.insert(0, ROOT)
-from evac import codes, llm, store  # noqa: E402
+from evac import codes, llm, router, store  # noqa: E402
 import closer_demo  # noqa: E402  (a phone asks about a photo it keeps)
 import group_demo  # noqa: E402  (a WhatsApp group with Muse in it, simulated)
 
@@ -82,6 +82,9 @@ class Handler(SimpleHTTPRequestHandler):
         if path.startswith("/eval/three_ways/") and path.endswith(".png") and ".." not in path:
             p = os.path.join(EVAL, path[len("/eval/"):])
             return self.send_bytes(open(p, "rb").read(), "image/png") if os.path.exists(p) else self.send_error(404)
+        if path == "/api/phone/replies":  # for MuZip on a Mac: what the bridge sent a number (WhatsApp or SMS) since a time
+            q = dict(kv.split("=", 1) for kv in query.split("&") if "=" in kv)
+            return self.send_json({"replies": phone_replies(unquote(q.get("to", "")), float(q.get("after") or 0))})
         api = {"/api/closer/samples": lambda: {"samples": closer_demo.samples()},
                "/api/closer/state": lambda: closer_demo.state(arg),
                "/api/compare": compare_rows,
@@ -93,6 +96,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
         try:
+            if self.path == "/api/phone/ask":  # MuZip on a Mac, "simulated": a message straight to the router, no texts
+                return self.send_json({"text": router.handle(body.get("text", ""), who=body.get("who") or "mac:sim").get("text") or ""})
             if self.path == "/api/closer/start":  # a simulated phone asks about one of the sample photos
                 return self.send_json({"conv": closer_demo.start(body["sample"], body.get("question") or "What is this?")})
             if self.path == "/api/group/start":  # a group member shares a sample photo
@@ -103,6 +108,18 @@ class Handler(SimpleHTTPRequestHandler):
         except Exception as ex:
             traceback.print_exc()
             self.send_json({"error": "%s: %s" % (type(ex).__name__, ex)}, 500)
+
+
+def phone_replies(to, after):
+    """Messages the bridge sent to `to` (or, if empty, to your own WhatsApp: MY_WHATSAPP) after time `after`, oldest
+    first: how MuZip on a Mac reads Muse's WhatsApp replies without reading WhatsApp."""
+    if not to:
+        n = os.environ.get("MY_WHATSAPP", "").strip()
+        to = n if n.startswith("whatsapp:") else "whatsapp:+" + n.lstrip("+")
+    rows = [r for kind in ("wa_msg", "sms_msg") for r in store.find(kind, since=after - 5, limit=200)]
+    out = [{"at": r["meta"]["at"], "body": r["meta"]["body"]} for r in rows
+           if r["who"] == to and r["meta"].get("dir") == "out" and r["meta"].get("at", 0) > after]
+    return sorted(out, key=lambda m: m["at"])
 
 
 if __name__ == "__main__":
