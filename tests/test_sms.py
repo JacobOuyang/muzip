@@ -47,6 +47,11 @@ class SMSTest(unittest.TestCase):
         self.assertTrue(body.startswith("MuZip: Not sure yet"))
         self.assertIn("the label. Reply STOP to opt out.\nZOOM ab 10 20 30 40 C", body)
 
+    def test_an_answer_without_a_full_stop_gets_one_before_the_stop_line(self):
+        self.reply = "Paris"
+        sms.take(WHO, "What's the capital of France?")
+        self.assertEqual(sms.OUTBOX[-1]["body"], "MuZip: Paris. Reply STOP to opt out.")
+
     def test_later_replies_have_no_stop_line(self):
         self.reply = "Yes, it is ibuprofen 200 mg."
         z = codes.parts("Z", codes.zoom_head("ab", [10, 20, 30, 40]) + b"webp", "az")
