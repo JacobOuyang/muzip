@@ -15,7 +15,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "MuZipCore", dependencies: [.product(name: "libwebp", package: "libwebp-Xcode")]),
-        .executableTarget(name: "MuZip", dependencies: ["MuZipCore"], linkerSettings: [.linkedLibrary("sqlite3")]),
+        .executableTarget(name: "MuZip", dependencies: ["MuZipCore"]),
         .executableTarget(name: "muzip-cli", dependencies: ["MuZipCore"]),
     ]
 )
