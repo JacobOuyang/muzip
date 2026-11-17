@@ -102,7 +102,8 @@ def words(text, first=False):
     if first:
         at = next((i for i, line in enumerate(lines) if codes.ZOOM.match(line.strip())), len(lines))
         if at:
-            lines[at - 1] = lines[at - 1].rstrip() + " " + STOP_LINE
+            last = lines[at - 1].rstrip()
+            lines[at - 1] = last + ("" if last[-1:] in ".!?:" else ".") + " " + STOP_LINE
         else:
             lines.insert(0, STOP_LINE)
     return "MuZip: " + "\n".join(lines)
