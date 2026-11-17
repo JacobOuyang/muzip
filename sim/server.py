@@ -85,6 +85,8 @@ class Handler(SimpleHTTPRequestHandler):
         if path == "/api/phone/replies":  # for MuZip on a Mac: what the bridge sent a number (WhatsApp or SMS) since a time
             q = dict(kv.split("=", 1) for kv in query.split("&") if "=" in kv)
             return self.send_json({"replies": phone_replies(unquote(q.get("to", "")), float(q.get("after") or 0), q.get("pic", ""))})
+        if path == "/api/phone/config":  # the MuZip number, from .env (SMS_FROM), so the apps don't carry it
+            return self.send_json({"sms_number": os.environ.get("SMS_FROM", "")})
         api = {"/api/closer/samples": lambda: {"samples": closer_demo.samples()},
                "/api/closer/state": lambda: closer_demo.state(arg),
                "/api/compare": compare_rows,

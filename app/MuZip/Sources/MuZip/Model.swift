@@ -14,7 +14,7 @@ final class AppModel: ObservableObject {
     @Published var busy = false
 
     @AppStorage("channel") var channelKind: ChannelKind = .simulated
-    @AppStorage("smsNumber") var smsNumber = ""
+    @AppStorage("smsNumber") var smsNumber = ""   // empty: SMS_FROM from .env, through the simulator server
     @AppStorage("server") var server = "http://127.0.0.1:8765"
     @AppStorage("partsPerText") var partsPerText = 3
 
@@ -39,7 +39,23 @@ final class AppModel: ObservableObject {
         return c
     }
 
+    /// The MuZip number: the one in Settings, or else SMS_FROM from the repo's .env (sim/server.py /api/phone/config).
+    func loadNumber() async {
+        guard smsNumber.isEmpty, let url = URL(string: server)?.appendingPathComponent("api/phone/config"),
+              let (data, _) = try? await URLSession.shared.data(from: url),
+              let n = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["sms_number"] as? String, !n.isEmpty else { return }
+        smsNumber = n
+    }
+
     func ask(photo: Photo, question: String) {
+        if channelKind == .sms && smsNumber.isEmpty {
+            Task {
+                await loadNumber()
+                if smsNumber.isEmpty { error = "Set the MuZip number in Settings, or SMS_FROM in .env with the simulator running." }
+                else { ask(photo: photo, question: question) }
+            }
+            return
+        }
         let q = Inquiry(photo: photo, question: question.isEmpty ? "What is this?" : question)
         inquiries.insert(q, at: 0)
         selected = q.id

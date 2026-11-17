@@ -286,7 +286,7 @@ struct SettingsView: View {
         Form {
             Picker("Send by", selection: $model.channelKind) { ForEach(ChannelKind.allCases) { Text($0.rawValue).tag($0) } }
             Section("SMS") {
-                TextField("MuZip number", text: $model.smsNumber)
+                TextField("MuZip number", text: $model.smsNumber, prompt: Text("from .env (SMS_FROM)"))
                 Stepper("Code parts per text: \(model.partsPerText)", value: $model.partsPerText, in: 1...10)
                 Text("Sent from your number through Messages (turn on Text Message Forwarding on your iPhone). Muse\u{2019}s replies are read from the bridge on this Mac, through the simulator server below, so MuZip needs no Full Disk Access.")
                     .font(.caption).foregroundStyle(.secondary)
