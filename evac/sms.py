@@ -9,7 +9,7 @@ Every reply starts "MuZip: " and the first reply to each question ends its words
 the number's registration describes). STOP, HELP and START are answered by Twilio's opt-out handling, not here.
 
 Twilio posts every incoming text to POST /sms on the bridge (sim/whatsapp_server.py). .env: TWILIO_ACCOUNT_SID,
-TWILIO_AUTH_TOKEN, PUBLIC_URL (as for WhatsApp), SMS_FROM (the MuZip number, e.g. ). Without credentials,
+TWILIO_AUTH_TOKEN, PUBLIC_URL (as for WhatsApp), SMS_FROM (the MuZip number, +1 and ten digits). Without credentials,
 replies only go to OUTBOX (what tests read).
 """
 import threading
