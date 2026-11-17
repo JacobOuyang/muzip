@@ -19,7 +19,7 @@ final class PhoneModel: ObservableObject {
     @Published var path: [UUID] = []
 
     @AppStorage("channel") var channel: PhoneChannel = .sms
-    @AppStorage("smsNumber") var smsNumber = ""
+    @AppStorage("smsNumber") var smsNumber = ""   // for reference only: the "MuZip Send" shortcut holds the number
     @AppStorage("macServer") var macServer = "http://your-mac.local:8765"
     @AppStorage("shortcutName") var shortcutName = "MuZip Send"
     @AppStorage("partsPerText") var partsPerText = 3

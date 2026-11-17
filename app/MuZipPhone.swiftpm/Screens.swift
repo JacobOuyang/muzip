@@ -224,7 +224,7 @@ struct SettingsView: View {
             Form {
                 Picker("Send by", selection: $model.channel) { ForEach(PhoneChannel.allCases) { Text($0.rawValue).tag($0) } }
                 Section {
-                    TextField("MuZip number", text: $model.smsNumber).keyboardType(.phonePad)
+                    TextField("MuZip number (for your notes)", text: $model.smsNumber).keyboardType(.phonePad)
                     TextField("Shortcut name", text: $model.shortcutName)
                     Stepper("Code parts per text: \(model.partsPerText)", value: $model.partsPerText, in: 1...10)
                 } header: { Text("SMS") } footer: {
