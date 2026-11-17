@@ -96,22 +96,24 @@ holds the Accessibility grant and never touches ~/Documents: macOS's per-app Doc
 **SMS (`evac/sms.py`).** Texts to the MuZip number reach `POST /sms` on the same bridge. It buffers each sender's
 texts until every code in them is complete (then one `router.handle`), asks `RESEND` after `WAIT` (90 s), prefixes
 replies "MuZip: " and adds the STOP line to a question's first reply (what the number's A2P registration says; the
-terms/privacy pages are `docs/terms/`, `docs/privacy/`). `.env`: `SMS_FROM`. Twilio won't deliver replies from an
-unregistered US 10DLC number (error 30034), and trial accounts can't register.
+terms/privacy pages are `docs/terms/`, `docs/privacy/`). `.env`: `SMS_FROM` (the registered number; its campaign is
+verified and its webhook is `PUBLIC_URL`/sms, to update whenever the tunnel's address changes).
 
 **The Mac app (`app/MuZip`, Swift package; `app/MuZip/make_app.sh` builds `build/MuZip.app` with Command Line Tools,
 no Xcode).** `MuZipCore` ports the phone's side (codes, sketch, `crop_zoom` arithmetic, WebP via libwebp-Xcode, one
 question's loop in `Inquiry`) and is meant to be shared with an iPhone app; `tests/test_swift_core.py` checks it against
 Python through `muzip-cli` (`swift build --product muzip-cli` first; `muzip-cli ask` runs the loop against the
-simulator). Channels: SMS (Messages AppleScript + `~/Library/Messages/chat.db`), WhatsApp (`whatsapp://send` + Return;
-replies from `sim/server.py`'s `/api/phone/replies`), Simulated (`/api/phone/ask`). A ZOOM change now also touches
+simulator). Channels: SMS (sent by Messages AppleScript; replies read from `sim/server.py`'s
+`/api/phone/replies?pic=`, not `chat.db`, which needs Full Disk Access), Simulated (`/api/phone/ask`); WhatsApp was
+dropped from both apps. `MuZip --ask <photo> "<q>" --channel sms|simulated` (via `open -a … --stdout f --args`) runs a
+question at launch and prints each step; keep test photos outside ~/Documents (macOS asks before an app reads it). A ZOOM change now also touches
 `Codes.swift` and `Picture.swift`.
 
 **The iPhone app (`app/MuZipPhone.swiftpm`):** an AppleProductTypes app package on `../MuZip`'s `MuZipCore`; camera +
 PhotosPicker; SMS through a "MuZip Send" shortcut (texts split at `~~~`) and a Message automation opening
-`muzip://reply?text=`; WhatsApp and Simulated go through `sim/server.py` on the Mac (`SIM_HOST=0.0.0.0`). Xcode's
-license isn't accepted on this Mac, so check iOS code with Xcode's toolchain swiftc directly (`-typecheck -target
-arm64-apple-ios17.0 -sdk …/iPhoneOS.sdk`, MuZipCore emitted as a module first, libwebp through a modulemap).
+`muzip://reply?text=`; Simulated goes through `sim/server.py` on the Mac (`SIM_HOST=0.0.0.0`). Build check:
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -scheme MuZipPhone -destination
+'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build` in the package (xcode-select points at the Command Line Tools).
 
 **Benchmarks (`evals/bench/`):** `fetch.py`, `run.py`, `sweep.py`, `steps.py`, `RESULTS.md`; loop sizes are
 parameters (`smsimage.SIDE`, `codes.HIGH`, `closer.MAX_VIEWS`, `closer.BUDGET`), unchanged at the defaults.

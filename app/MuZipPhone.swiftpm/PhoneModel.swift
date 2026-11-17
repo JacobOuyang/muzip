@@ -7,7 +7,7 @@ import UIKit
 /// two Shortcuts the person sets up once (see SetupView): "MuZip Send" sends what MuZip hands it, and a Message
 /// automation hands every text from the MuZip number back to MuZip (muzip://reply?text=...).
 enum PhoneChannel: String, CaseIterable, Identifiable {
-    case sms = "SMS", whatsapp = "WhatsApp", simulated = "Simulated"
+    case sms = "SMS", simulated = "Simulated"
     var id: String { rawValue }
 }
 
@@ -20,14 +20,11 @@ final class PhoneModel: ObservableObject {
 
     @AppStorage("channel") var channel: PhoneChannel = .sms
     @AppStorage("smsNumber") var smsNumber = ""
-    @AppStorage("whatsappNumber") var whatsappNumber = "+1 415 523 8886"
     @AppStorage("macServer") var macServer = "http://your-mac.local:8765"
     @AppStorage("shortcutName") var shortcutName = "MuZip Send"
     @AppStorage("partsPerText") var partsPerText = 3
 
     private var channelOf: [UUID: PhoneChannel] = [:]
-    private var after = Date().timeIntervalSince1970
-    private var polling: Task<Void, Never>?
     static let separator = "~~~"         // between texts, for the Shortcut's "Split Text"
 
     var open: Inquiry? { inquiries.first { !$0.done } }
@@ -39,7 +36,6 @@ final class PhoneModel: ObservableObject {
         inquiries.insert(q, at: 0)
         channelOf[q.id] = channel
         path = [q.id]
-        after = Date().timeIntervalSince1970
         send(q.start(), for: q)
     }
 
@@ -51,7 +47,6 @@ final class PhoneModel: ObservableObject {
             send(back, for: q)
         } else if q.done {
             status = "Answered: \(q.textsSent) texts, \(q.bytesSent.formatted()) bytes sent"
-            polling?.cancel(); polling = nil
         }
         objectWillChange.send()
     }
@@ -74,7 +69,6 @@ final class PhoneModel: ObservableObject {
         objectWillChange.send()
         switch how {
         case .sms: sendBySMS(message)
-        case .whatsapp: sendByWhatsApp(message)
         case .simulated: sendSimulated(message)
         }
     }
@@ -91,14 +85,6 @@ final class PhoneModel: ObservableObject {
                              ("text", texts.joined(separator: "\n\(PhoneModel.separator)\n")), ("x-success", "muzip://sent")])
         open(URL(string: "shortcuts://x-callback-url/run-shortcut?" + q), else: "Couldn't open Shortcuts. Set up \"\(shortcutName)\" first (Settings → Set up SMS).")
         status = "Waiting for Muse's text…"
-    }
-
-    /// WhatsApp fills in the message; you tap send. Replies come from the bridge's log through the Mac.
-    private func sendByWhatsApp(_ message: String) {
-        open(URL(string: "whatsapp://send?" + strictQuery([("phone", whatsappNumber.filter(\.isNumber)), ("text", message)])),
-             else: "Couldn't open WhatsApp.")
-        status = "Tap send in WhatsApp, then come back"
-        startPolling()
     }
 
     private func sendSimulated(_ message: String) {
@@ -118,24 +104,6 @@ final class PhoneModel: ObservableObject {
         }
     }
 
-    private func startPolling() {
-        guard polling == nil, let base = URL(string: macServer) else { return }
-        polling = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                guard let self else { return }
-                var c = URLComponents(url: base.appendingPathComponent("api/phone/replies"), resolvingAgainstBaseURL: false)!
-                c.queryItems = [URLQueryItem(name: "after", value: String(after))]
-                guard let (data, _) = try? await URLSession.shared.data(from: c.url!),
-                      let rs = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["replies"] as? [[String: Any]] else { continue }
-                for r in rs {
-                    if let at = r["at"] as? Double { after = max(after, at) }
-                    if let body = r["body"] as? String { receive(body) }
-                }
-            }
-        }
-    }
-
     private func open(_ url: URL?, else message: String) {
         guard let url else { error = message; return }
         UIApplication.shared.open(url) { ok in if !ok { Task { @MainActor in self.error = message } } }
@@ -143,7 +111,7 @@ final class PhoneModel: ObservableObject {
 }
 
 /// A query string with every character outside A-Z a-z 0-9 - . _ ~ percent-encoded: URLComponents leaves "+" as it is,
-/// and Shortcuts and WhatsApp read a bare "+" as a space, which breaks the codes' base64.
+/// and Shortcuts read a bare "+" as a space, which breaks the codes' base64.
 func strictQuery(_ items: [(String, String)]) -> String {
     let ok = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
     return items.map { "\($0.0)=\($0.1.addingPercentEncoding(withAllowedCharacters: ok)!)" }.joined(separator: "&")

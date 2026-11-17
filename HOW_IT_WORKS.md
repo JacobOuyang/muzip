@@ -344,10 +344,25 @@ Muse   I can't tell from what I can see. (not sure)
 ```
 
 The app (`MuZip`) shows the photo with every close-up boxed, the pictures Muse got, the texts sent and the
-conversation; close-ups go automatically. Its channels: SMS sends through Messages by AppleScript (a few code parts a
-text) and reads replies from Messages' database; WhatsApp opens `whatsapp://send` and presses Return, and reads replies
-from the bridge's log through `sim/server.py` (`/api/phone/replies`); Simulated posts to `/api/phone/ask`, which calls
-the router directly.
+conversation; close-ups go automatically. Its channels: SMS sends real texts through Messages by AppleScript (three
+code parts a text) and reads Muse's replies from the bridge's log through `sim/server.py` (`/api/phone/replies?pic=`:
+the number that texted that photo's sketch), since reading Messages' own database needs Full Disk Access; Simulated
+posts to `/api/phone/ask`, which calls the router directly. A real run over SMS from the app (`--ask` at launch, the
+dashboard photo, the MuZip number), where one text (parts 7-9 of the first close-up) was held up and the bridge asked for
+it again after 90 s:
+
+```
+23:57:55Z asking by SMS: Two warning lights came on on my dashboard. Which ones are they, and what do they mean?
+23:57:55Z sent    sketch 650 B, 7 texts: Two warning lights came on on my dashboard. Which ones are they, and what do they mean?
+23:58:15Z muse    Not sure yet: I need a closer look at the instrument cluster behind the steering wheel to see which warning symbols are lit, in colour, in high detail.
+23:58:15Z sent    1 close-up(s) 256x125 C H 1996 B, 20 texts
+23:59:59Z note    Muse missed 3 parts; sent again.
+00:00:18Z muse    Not sure yet: I need closer looks at the red warning light to see the symbol inside it, in colour, in high detail; and the amber warning light to see the symbol inside it, in colour, in high detail.
+00:00:18Z sent    2 close-up(s) 90x60 C H 374 B, 60x60 C H 232 B, 7 texts
+00:00:46Z answer  The amber one is the check-engine light, meaning there is an engine problem, and the red one is the seat-belt reminder, meaning a seat belt is unbuckled. Buckle all seat belts and get the engine checked soon. [37 texts, 3252 B in all]
+```
+
+The answer is half wrong: the red light is the battery light (right on Simulated a few minutes earlier).
 
 ## The iPhone app
 

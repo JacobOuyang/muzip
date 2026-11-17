@@ -239,11 +239,6 @@ struct SettingsView: View {
                     """)
                 }
                 Section {
-                    TextField("Muse number", text: $model.whatsappNumber).keyboardType(.phonePad)
-                } header: { Text("WhatsApp") } footer: {
-                    Text("WhatsApp opens with the message filled in; tap send. Replies are read from the bridge on your Mac (the address below).")
-                }
-                Section {
                     TextField("Mac address", text: $model.macServer).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                 } header: { Text("Your Mac") } footer: {
                     Text("The MuZip simulator on your Mac, reachable on your Wi-Fi: start it with SIM_HOST=0.0.0.0 .venv/bin/python sim/server.py and use http://<your Mac's name>.local:8765. Simulated sends straight to it, with no texts.")

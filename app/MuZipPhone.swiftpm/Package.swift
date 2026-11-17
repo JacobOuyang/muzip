@@ -21,7 +21,7 @@ let package = Package(
             capabilities: [
                 .camera(purposeString: "MuZip takes the photo you ask about. The photo stays on your iPhone."),
                 .photoLibrary(purposeString: "MuZip can ask about a photo you already took. It stays on your iPhone."),
-                .localNetwork(purposeString: "MuZip's Simulated and WhatsApp modes talk to the MuZip simulator on your Mac."),
+                .localNetwork(purposeString: "MuZip's Simulated mode talks to the MuZip simulator on your Mac."),
             ],
             additionalInfoPlistContentFilePath: "Info.plist"
         ),

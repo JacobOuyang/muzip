@@ -12,7 +12,7 @@
 		</dict>
 	</array>
 	<key>LSApplicationQueriesSchemes</key>
-	<array><string>shortcuts</string><string>whatsapp</string></array>
+	<array><string>shortcuts</string></array>
 	<key>NSAppTransportSecurity</key>
 	<dict><key>NSAllowsLocalNetworking</key><true/></dict>
 </dict>

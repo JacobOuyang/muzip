@@ -192,18 +192,20 @@ the bridge instead of through WhatsApp Desktop (the replies still reach your Wha
 
 A native app (SwiftUI, `app/MuZip`) that does the phone's side itself: drop a photo, ask, and it sends the sketch and
 every close-up Muse asks for, showing where each one came from, what Muse saw and how many texts it took. **Send by**
-picks the channel: **SMS** (real texts from your number through Messages, to the MuZip number), **WhatsApp** (from
-WhatsApp Desktop to the sandbox, as in step 4) or **Simulated** (straight to the router on this Mac, no texts). It
+picks the channel: **SMS** (real texts from your number through Messages, to the MuZip number) or **Simulated**
+(straight to the router on this Mac, no texts). It
 needs Xcode's command line tools (Swift 6), not Xcode itself.
 
 ```bash
 app/MuZip/make_app.sh && open app/MuZip/build/MuZip.app
 ```
 
-Simulated needs only the simulator (`sim/server.py`) running. WhatsApp also needs step 3, and MuZip allowed to control
-WhatsApp and under **Accessibility** (to press Return). SMS needs Text Message Forwarding on your iPhone, Full Disk
-Access for MuZip (to read the replies in Messages), and the bridge on Twilio's number: in the number's settings, "A
-message comes in" → `PUBLIC_URL` + `/sms`, and `SMS_FROM` (the number) in `.env`. A US number has to be registered
+Simulated needs only the simulator (`sim/server.py`) running. SMS needs Text Message Forwarding on your iPhone, MuZip
+allowed to control Messages (asked the first time), and the bridge and tunnel from step 3 on Twilio's number: in the
+number's settings, "A message comes in" → `PUBLIC_URL` + `/sms`, and `SMS_FROM` (the number) in `.env`. MuZip reads
+Muse's replies from the bridge's log through the simulator, not from Messages (that would need Full Disk Access).
+`open -a app/MuZip/build/MuZip.app --stdout log.txt --args --ask photo.jpg "question" --channel sms` asks at launch
+and prints every step. A US number has to be registered
 for A2P 10DLC before Twilio delivers its replies (the terms and privacy pages it needs are in `docs/terms/` and
 `docs/privacy/`).
 
@@ -216,8 +218,7 @@ with the same Swift core as the Mac app. Open the folder in Xcode, choose your i
 iOS lets no app send or read texts by itself, so **SMS** goes through two Shortcuts you make once (the app's Settings
 spell them out): "MuZip Send" splits what MuZip hands it at `~~~` lines and sends each text to the MuZip number, and a
 Message automation (sender: the MuZip number, run immediately) opens `muzip://reply?text=` with the text, which
-MuZip answers with the next close-ups. **WhatsApp** opens WhatsApp with the message filled in (you tap send) and reads
-replies from the Mac; **Simulated** sends straight to the simulator on your Mac, started with
+MuZip answers with the next close-ups. **Simulated** sends straight to the simulator on your Mac, started with
 `SIM_HOST=0.0.0.0 .venv/bin/python sim/server.py` and reached at `http://<your Mac's name>.local:8765`.
 
 ### If something doesn't work
