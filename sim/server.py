@@ -84,7 +84,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_bytes(open(p, "rb").read(), "image/png") if os.path.exists(p) else self.send_error(404)
         if path == "/api/phone/replies":  # for MuZip on a Mac: what the bridge sent a number (WhatsApp or SMS) since a time
             q = dict(kv.split("=", 1) for kv in query.split("&") if "=" in kv)
-            return self.send_json({"replies": phone_replies(unquote(q.get("to", "")), float(q.get("after") or 0))})
+            return self.send_json({"replies": phone_replies(unquote(q.get("to", "")), float(q.get("after") or 0), q.get("pic", ""))})
         api = {"/api/closer/samples": lambda: {"samples": closer_demo.samples()},
                "/api/closer/state": lambda: closer_demo.state(arg),
                "/api/compare": compare_rows,
@@ -110,9 +110,17 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json({"error": "%s: %s" % (type(ex).__name__, ex)}, 500)
 
 
-def phone_replies(to, after):
-    """Messages the bridge sent to `to` (or, if empty, to your own WhatsApp: MY_WHATSAPP) after time `after`, oldest
-    first: how MuZip on a Mac reads Muse's WhatsApp replies without reading WhatsApp."""
+def phone_replies(to, after, pic=""):
+    """Messages the bridge sent to `to` after time `after`, oldest first: how MuZip on a Mac reads Muse's replies
+    without reading Messages (which would need Full Disk Access). With `pic` (the photo's code id) instead of `to`,
+    the number is whoever texted that photo's sketch to the MuZip number; with neither, your own WhatsApp
+    (MY_WHATSAPP)."""
+    if pic and not to:
+        sent = next((r for r in store.find("sms_msg", since=after - 600, limit=500)
+                     if r["meta"].get("dir") == "in" and ("#P%s." % pic) in r["meta"].get("body", "")), None)
+        if not sent:
+            return []
+        to = sent["who"]
     if not to:
         n = os.environ.get("MY_WHATSAPP", "").strip()
         to = n if n.startswith("whatsapp:") else "whatsapp:+" + n.lstrip("+")
@@ -125,4 +133,4 @@ def phone_replies(to, after):
 if __name__ == "__main__":
     llm._load_dotenv()
     print("simulator on http://127.0.0.1:%d (model %s)" % (PORT, "on" if llm.available() else "off: set LLAMA_API_KEY in .env"), flush=True)
-    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    ThreadingHTTPServer((os.environ.get("SIM_HOST", "127.0.0.1"), PORT), Handler).serve_forever()

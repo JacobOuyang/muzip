@@ -5,9 +5,15 @@ import UniformTypeIdentifiers
 
 @main
 struct MuZipApp: App {
-    @StateObject private var model = AppModel()
+    @StateObject private var model = AppModel.shared
 
-    init() { NSApplication.shared.setActivationPolicy(.regular) }
+    init() {
+        NSApplication.shared.setActivationPolicy(.regular)
+        let model = AppModel.shared
+        if CommandLine.arguments.contains("--ask") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { model.autoAsk(CommandLine.arguments) }
+        }
+    }
 
     var body: some Scene {
         WindowGroup("MuZip") {
@@ -282,17 +288,12 @@ struct SettingsView: View {
             Section("SMS") {
                 TextField("MuZip number", text: $model.smsNumber)
                 Stepper("Code parts per text: \(model.partsPerText)", value: $model.partsPerText, in: 1...10)
-                Text("Sent from your number through Messages (turn on Text Message Forwarding on your iPhone). Reading replies needs Full Disk Access for MuZip.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Section("WhatsApp") {
-                TextField("Muse number", text: $model.whatsappNumber)
-                Text("Sent from WhatsApp Desktop (MuZip needs Accessibility to press Return). Replies are read from the bridge's log through the simulator server below.")
+                Text("Sent from your number through Messages (turn on Text Message Forwarding on your iPhone). Muse\u{2019}s replies are read from the bridge on this Mac, through the simulator server below, so MuZip needs no Full Disk Access.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("This Mac") {
                 TextField("Simulator server", text: $model.server)
-                Text("sim/server.py: Simulated asks the router directly; WhatsApp reads replies here.").font(.caption).foregroundStyle(.secondary)
+                Text("sim/server.py: Simulated asks the router directly, with no texts; SMS reads Muse\u{2019}s replies here.").font(.caption).foregroundStyle(.secondary)
             }
         }
         .padding(20)

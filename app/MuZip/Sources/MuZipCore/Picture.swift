@@ -17,14 +17,23 @@ public final class Photo {
 
     /// A photo file, turned upright (EXIF orientation applied), at full size.
     public convenience init?(url: URL) {
-        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any],
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil), let img = Photo.upright(src) else { return nil }
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        self.init(image: img, fileBytes: size)
+    }
+
+    /// A photo's file bytes (JPEG, HEIC, PNG...), turned upright, at full size.
+    public convenience init?(data: Data) {
+        guard let src = CGImageSourceCreateWithData(data as CFData, nil), let img = Photo.upright(src) else { return nil }
+        self.init(image: img, fileBytes: data.count)
+    }
+
+    static func upright(_ src: CGImageSource) -> CGImage? {
+        guard let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any],
               let w = props[kCGImagePropertyPixelWidth] as? Int, let h = props[kCGImagePropertyPixelHeight] as? Int else { return nil }
         let opts: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true,
                                      kCGImageSourceThumbnailMaxPixelSize: max(w, h)]
-        guard let img = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
-        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-        self.init(image: img, fileBytes: size ?? 0)
+        return CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary)
     }
 
     /// The size a picture of w x h is shrunk to, to fit in side x side (Pillow's thumbnail: never enlarged).
